@@ -30,6 +30,8 @@ app.use(session({
 app.use("/usuarios", usuariosRoutes);
 app.use("/tarefas", tarefasRoutes);
 
-app.listen(process.env.PORT, () => {
-    console.log(`Servidor rodando na url -> http://localhost:${process.env.PORT}`)
+const PORT = process.env.PORT || 3000
+
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na url -> http://localhost:${PORT}`)
 })
