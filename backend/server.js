@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "https://todolists-swart.vercel.app"],
   credentials: true
 }));
 
@@ -30,8 +30,6 @@ app.use(session({
 app.use("/usuarios", usuariosRoutes);
 app.use("/tarefas", tarefasRoutes);
 
-const PORT = process.env.PORT || 3000
-
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na url -> http://localhost:${PORT}`)
+app.listen(process.env.PORT, () => {
+    console.log(`Servidor rodando na url -> http://localhost:${process.env.PORT}`)
 })
