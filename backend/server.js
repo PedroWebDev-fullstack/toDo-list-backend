@@ -1,39 +1,103 @@
-import dotenv from "dotenv";
-import express from "express";
-import cors from "cors";
-import session from "express-session";
-import usuariosRoutes from "./routes/usuario.routes.js";
-import tarefasRoutes from "./routes/tarefas.routes.js";
+import pool from "../db.js";
 
-dotenv.config();
+const mostrarTarefas = async (req, res) => {
+    try {
+        if (!req.session.usuario) {
+          return res.status(401).json({ erro: "Não autenticado" });
+        }
 
-const app = express();
+        const idUsuario = req.session.usuario.id;
+        
+        const result = await pool.query('SELECT * FROM tarefas WHERE "idUsuario" = $1', [idUsuario]);
 
-app.use(express.json());
+        res.status(200).json(result.rows);
+    } catch (error) {
+        res.status(500).json(error);
+    };
+};
 
-app.use(cors({
-  origin: ["http://localhost:5173", "https://todolists-swart.vercel.app"],
-  credentials: true
-}));
+const adicionarTarefa = async (req, res) => {
+    try {
+        if (!req.session.usuario) {
+          return res.status(401).json({ erro: "Não autenticado" });
+        }
 
-app.set("trust proxy", 1);
+        const idUsuario = req.session.usuario.id;
+        let { descricao, estaFeita } = req.body;
+        estaFeita = estaFeita === true || estaFeita === "true";
 
-app.use(session({
-  secret: process.env.SECRET_KEY,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: true,
-    httpOnly: true,
-    sameSite: "none"
-  }
-}));
+        if (!descricao) {
+            return res.status(400).json({ erro: "Descrição obrigatória" });
+        }
+        
 
-app.use("/usuarios", usuariosRoutes);
-app.use("/tarefas", tarefasRoutes);
+        await pool.query('INSERT INTO tarefas ("idUsuario", descricao, "estaFeita") VALUES ($1, $2, $3)', [idUsuario, descricao, estaFeita]);
 
-const PORT = process.env.PORT || 3000;
+        res.status(201).json({
+            sucesso: true,
+            texto: "Nova tarefa adicionada.",
+            descricao: descricao
+        });
+    } catch (error) {
+        res.status(500).json(error);
+    };
+};
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na url -> https://todo-list-backend-fznk.onrender.com:${PORT}`)
-})
+const alterarConclusao = async (req, res) => {
+    try {
+        if (!req.session.usuario) {
+          return res.status(401).json({ erro: "Não autenticado" });
+        }
+
+        const idUsuario = req.session.usuario.id;
+        let { id, estaFeita } = req.body;
+        estaFeita = estaFeita === true || estaFeita === "true";
+
+        await pool.query('UPDATE tarefas SET "estaFeita" = $1 WHERE id = $2 AND "idUsuario" = $3', [estaFeita, id, idUsuario]);
+
+        res.status(200).json({
+            sucesso: true,
+            texto: estaFeita ? "Tarefa concluida" : "Tarefa pendente"
+        });
+    } catch (error) {
+        res.status(500).json(error);
+    };
+};
+
+const filtrarTarefas = async (req, res) => {
+    try {
+        if (!req.session.usuario) {
+          return res.status(401).json({ erro: "Não autenticado" });
+        };
+
+        const idUsuario = req.session.usuario.id;
+        let { estaFeita } = req.query;
+        estaFeita = estaFeita === true || estaFeita === "true";
+        
+        const result = await pool.query('SELECT * FROM tarefas WHERE "idUsuario" = $1 AND "estaFeita" = $2', [idUsuario, estaFeita]);
+        res.status(200).json(result.rows);
+    } catch (error) {
+      res.status(500).json(error);
+    };
+};
+
+const deletarTarefa = async (req, res) => {
+    try {
+        if (!req.session.usuario) {
+          return res.status(401).json({ erro: "Não autenticado" });
+        }
+        
+        const idUsuario = req.session.usuario.id;
+        const id = req.params.id;
+        await pool.query('DELETE FROM tarefas WHERE id = $1 AND "idUsuario" = $2', [id, idUsuario]);
+        res.status(200).json({ sucesso: true })
+    } catch (error) {
+        res.status(500).json(error);
+    }
+}
+
+export { mostrarTarefas, adicionarTarefa, alterarConclusao, filtrarTarefas, deletarTarefa };
+
+console.log("SESSION:", req.session.usuario);
+console.log("BODY:", req.body);
+console.log("QUERY:", req.query);
